@@ -1,0 +1,8 @@
+name: DiaWatcher
+version: 1.0
+main: io.guthub.martin.diaWatcher.Main
+api-version: 1.16
+commands:
+   sendDiaFeedback:
+      description: toggle whether the diatransactions should print feedback to you
+      permission: DiaWatcher.sendDiaFeedback
