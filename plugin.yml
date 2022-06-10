@@ -1,6 +1,6 @@
 name: DiaWatcher
 version: 1.0
-main: io.guthub.martin.diaWatcher.Main
+main: io.github.mcrtin.diaWatcher.Main
 api-version: 1.16
 commands:
    sendDiaFeedback:

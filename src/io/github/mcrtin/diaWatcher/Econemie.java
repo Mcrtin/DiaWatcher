@@ -9,6 +9,7 @@ import javax.inject.Singleton;
 
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import lombok.extern.log4j.Log4j2;
@@ -46,8 +47,10 @@ public class Econemie {
 	public void load() {
 		final FileConfiguration config = Main.getPlugin().getConfig();
 		total = config.getSerializable("total", DiaCount.class, new DiaCount());
-		config.getConfigurationSection("eco").getValues(true).forEach((s, o) -> eco
-				.put(Bukkit.getOfflinePlayer(UUID.fromString(s)), DiaCount.deserialize((Map<String, Object>) o)));
+		final ConfigurationSection configurationSection = config.getConfigurationSection("eco");
+		if (configurationSection != null)
+			configurationSection.getValues(true).forEach((s, o) -> eco.put(Bukkit.getOfflinePlayer(UUID.fromString(s)),
+					DiaCount.deserialize((Map<String, Object>) o)));
 		updateTotal();
 	}
 
@@ -56,6 +59,7 @@ public class Econemie {
 		final FileConfiguration config = Main.getPlugin().getConfig();
 		config.set("total", total);
 		eco.forEach((player, diaCount) -> config.set("eco." + player.getUniqueId(), diaCount));
+		Main.getPlugin().saveConfig();
 	}
 
 	private void updateTotal() {

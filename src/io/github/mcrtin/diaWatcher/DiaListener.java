@@ -5,7 +5,6 @@ import java.util.Optional;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.block.Block;
 import org.bukkit.block.Container;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.HumanEntity;
@@ -13,6 +12,7 @@ import org.bukkit.entity.Item;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockDropItemEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
@@ -28,7 +28,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 public class DiaListener implements Listener {
 	private final Logger log = new Logger();
 
-	@EventHandler
+	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
 	public void onItemDespawn(ItemDespawnEvent e) {
 		final Item item = e.getEntity();
 		if (hasDias(item.getItemStack()))
@@ -36,8 +36,8 @@ public class DiaListener implements Listener {
 
 	}
 
-	@EventHandler
-	public void onItemDeath(EntityDamageEvent e) {
+	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
+	public void onItemDeath(EntityDamageEvent e) {//TODO
 		if (e.getEntityType() != EntityType.DROPPED_ITEM)
 			return;
 		final Item item = (Item) e.getEntity();
@@ -53,12 +53,11 @@ public class DiaListener implements Listener {
 //
 //	}
 
-	@EventHandler
+	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
 	public void onBlockBreak(BlockDropItemEvent e) {
-		final Block block = e.getBlock();
 		for (Item item : e.getItems())
 			if (hasDias(item.getItemStack()))
-				log.playerBreakBlock(block, e.getPlayer(), item);
+				log.playerBreakBlock(e.getBlockState(), e.getPlayer(), item);
 
 	}
 
@@ -96,8 +95,8 @@ public class DiaListener implements Listener {
 //			log.item2container(item, e.getInventory());
 //	}
 
-	@EventHandler
-	public void onPlayerInventory3(InventoryClickEvent e) {
+	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
+	public void onInventoryClick(InventoryClickEvent e) {
 		final HumanEntity hEntity = e.getWhoClicked();
 		if (hEntity.getType() != EntityType.PLAYER)
 			return;
@@ -230,7 +229,7 @@ public class DiaListener implements Listener {
 //			log.entity2item(entity, itemStack, "DEATH");
 //	}
 
-	@EventHandler
+	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
 	public void onEntityPickupItem(EntityPickupItemEvent e) {
 		final Item item = e.getItem();
 		final LivingEntity entity = e.getEntity();
@@ -245,7 +244,7 @@ public class DiaListener implements Listener {
 //		
 //	}
 
-	@EventHandler
+	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
 	public void onPlayerPlaceBlock(BlockPlaceEvent e) {
 		if (!e.canBuild())
 			return;

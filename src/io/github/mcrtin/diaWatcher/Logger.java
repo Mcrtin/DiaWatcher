@@ -10,6 +10,7 @@ import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
@@ -21,17 +22,16 @@ import org.bukkit.persistence.PersistentDataType;
 
 import io.github.mcrtin.logToPlayers.LogToPlayers;
 
-public class Logger implements ILogger {
+public class Logger {
 
-	@Override
 	public void destroy(Item item, Optional<DamageCause> damageCause) {
 		final ItemStack itemStack = item.getItemStack();
 		final Optional<OfflinePlayer> owner = getOwner(itemStack);
 		final Optional<String> ownerName = getOwnerName(owner);
 		owner.ifPresent(player -> ECO.subtract(new DiaCount(itemStack), player));
 
-		LogToPlayers.info("Destroyed {} at {}. Origial owner: {}, cause: {}", toString(itemStack),
-				toString(item.getLocation()), ownerName.orElse("§kmissing§r"),
+		LogToPlayers.info("Destroyed {} at {} from §b{}§r, because of §4{}§r.", toString(itemStack),
+				toString(item.getLocation()), ownerName.orElse("§7§omissing"),
 				damageCause.isPresent() ? damageCause.get() : "DESPAWN");
 	}
 
@@ -56,7 +56,6 @@ public class Logger implements ILogger {
 //	public void player2container(HumanEntity player, Inventory to, ItemStack itemStack) {
 //		LogToPlayers.info("player {} transfered {} to {}", player, itemStack, to.getLocation());
 //	}
-	@Override
 	public void container2player(Player player, Inventory from, ItemStack itemStack) {
 		final Optional<OfflinePlayer> owner = getOwner(itemStack);
 		final Optional<String> ownerName = getOwnerName(owner);
@@ -64,8 +63,8 @@ public class Logger implements ILogger {
 			return;
 		owner.ifPresentOrElse(p -> ECO.transfer(new DiaCount(itemStack), p, player),
 				() -> ECO.add(new DiaCount(itemStack), player));
-		LogToPlayers.info("from {} transfered {} to {} at {}", ownerName.orElse("§kmissing§r"), toString(itemStack),
-				player.getName(), toString(from.getLocation()));
+		LogToPlayers.info("Transfered {} from §b{}§r to §b{}§r at {}.", ownerName.orElse("§7§omissing§r"),
+				toString(itemStack), player.getName(), toString(from.getLocation()));
 	}
 //
 //	// hopper, dispenser, dropper
@@ -89,28 +88,27 @@ public class Logger implements ILogger {
 //		LogToPlayers.info("entity {} droped {} because of {}", entity, item.getItemStack(), cause);
 //	}
 
-//TODO old owner
-	@Override
-	public void playerBreakBlock(Block block, Player player, Item item) {
+// TODO old owner
+	public void playerBreakBlock(BlockState blockState, Player player, Item item) {
 		final ItemStack itemStack = item.getItemStack();
 		setOwner(itemStack, player);
 		ECO.add(new DiaCount(itemStack), player);
-		LogToPlayers.info("The {} at {} droped item {} by {}", block.getType(), toString(block.getLocation()),
-				toString(itemStack), player.getName());
+		LogToPlayers.info("The §3{}§r at {} droped {} by §b{}§r.", blockState.getType(),
+				toString(blockState.getLocation()), toString(itemStack), player.getName());
 	}
 
 	// TODO old owner
-	@Override
 	public void playerPlaceBlock(Block block, ItemStack itemStack, Player player) {
 		ItemStack clone = itemStack.clone();
-		clone.setAmount(0);
+		clone.setAmount(1);
 		ECO.subtract(new DiaCount(clone), player);
-		LogToPlayers.info("Placed {} at {} by {}", toString(clone), toString(block.getLocation()), player.getName());
+		LogToPlayers.info("Placed {} at {} by §b{}§r.", toString(clone), toString(block.getLocation()),
+				player.getName());
 
 		final Optional<OfflinePlayer> owner = getOwner(itemStack);
 		assert owner.isPresent() && owner.get().getUniqueId().equals(player.getUniqueId());
 	}
-	@Override
+
 	public void playerPickUpItem(Item item, Player player, int remaining) {
 		final ItemStack itemStack = item.getItemStack().clone();
 		itemStack.setAmount(itemStack.getAmount() - remaining);
@@ -122,8 +120,8 @@ public class Logger implements ILogger {
 
 		owner.ifPresentOrElse(p -> ECO.transfer(new DiaCount(itemStack), p, player),
 				() -> ECO.add(new DiaCount(itemStack), player));
-		LogToPlayers.info("{} picked up {} at {} of {}", player.getName(), toString(itemStack),
-				toString(item.getLocation()), ownerName.orElse("§kmissing§r"));
+		LogToPlayers.info("§b{}§r picked up {} at {} of §a{} ", player.getName(), toString(itemStack),
+				toString(item.getLocation()), ownerName.orElse("§7§omissing"));
 	}
 
 	private static final NamespacedKey OwnerKey = new NamespacedKey(Main.getPlugin(), "Owner");
@@ -134,7 +132,7 @@ public class Logger implements ILogger {
 
 		ItemMeta itemMeta = itemStack.getItemMeta();
 		final PersistentDataContainer pdc = itemMeta.getPersistentDataContainer();
-		if (pdc.has(OwnerKey, PersistentDataType.STRING))
+		if (!pdc.has(OwnerKey, PersistentDataType.STRING))
 			return Optional.empty();
 		final String owner = pdc.get(OwnerKey, PersistentDataType.STRING);
 		try {
@@ -155,15 +153,13 @@ public class Logger implements ILogger {
 	}
 
 	private String toString(Location location) {
-		return location.getX() + " " + location.getY() + " " + location.getZ();
+		return "§6" + location.getBlockX() + " " + location.getBlockY() + " " + location.getBlockZ() + "§r";
 	}
 
 	private String toString(ItemStack itemStack) {
-		StringBuilder toString = new StringBuilder(itemStack.getType().name()).append(" x ")
-				.append(itemStack.getAmount());
-		if (itemStack.hasItemMeta())
-			toString.append(", ").append(itemStack.getItemMeta());
-		return toString.append('}').toString();
+		StringBuilder toString = new StringBuilder("§9").append(itemStack.getType().name()).append(" §8x §a")
+				.append(itemStack.getAmount()).append("§r");
+		return toString.toString();
 	}
 
 }

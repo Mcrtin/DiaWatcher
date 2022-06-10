@@ -17,7 +17,7 @@ public class LogToPlayers {
 	}
 
 	public static void info(String message, Object... args) {
-		String[] split = message.split(Pattern.quote("{}"), args.length);
+		String[] split = message.split(Pattern.quote("{}"), args.length + 1);
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < split.length; i++) {
 			sb.append(split[i]);
