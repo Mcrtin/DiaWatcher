@@ -29,7 +29,7 @@ public class DiaListener implements Listener {
 	private final Logger log = new Logger();
 
 	@EventHandler
-	public void onItemDepsawn(ItemDespawnEvent e) {
+	public void onItemDespawn(ItemDespawnEvent e) {
 		final Item item = e.getEntity();
 		if (hasDias(item.getItemStack()))
 			log.destroy(item, Optional.empty());
