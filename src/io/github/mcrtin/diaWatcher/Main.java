@@ -4,6 +4,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.jeff_media.customblockdata.CustomBlockData;
+
 import io.github.mcrtin.logToPlayers.DiaFeedback;
 
 public class Main extends JavaPlugin {
@@ -11,6 +13,7 @@ public class Main extends JavaPlugin {
 
 	public void onEnable() {
 		plugin = this;
+		CustomBlockData.registerListener(this);
 		ConfigurationSerialization.registerClass(DiaCount.class);
 		Bukkit.getPluginManager().registerEvents(new DiaListener(), this);
 		getCommand("sendDiaFeedback").setExecutor(new DiaFeedback());

@@ -11,6 +11,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.inventory.ItemStack;
 
 import lombok.extern.log4j.Log4j2;
 
@@ -32,15 +33,27 @@ public class Econemie {
 				() -> log.warn("Can't subtract {} from {}", diaCount, player.getName()));
 	}
 
+	public void subtract(ItemStack itemStack, OfflinePlayer player) {
+		subtract(new DiaCount(itemStack), player);
+	}
+
 	public void transfer(DiaCount diaCount, OfflinePlayer from, OfflinePlayer to) {
 		Optional.ofNullable(eco.get(from)).ifPresentOrElse(d -> d.subtract(diaCount),
 				() -> log.warn("Can't subtract {} from {}", diaCount, from.getName()));
 		Optional.ofNullable(eco.get(to)).ifPresentOrElse(d -> d.add(diaCount), () -> eco.put(to, diaCount));
 	}
 
+	public void transfer(ItemStack itemStack, OfflinePlayer from, OfflinePlayer to) {
+		transfer(new DiaCount(itemStack), from, to);
+	}
+
 	public void add(DiaCount diaCount, OfflinePlayer player) {
 		total.add(diaCount);
 		Optional.ofNullable(eco.get(player)).ifPresentOrElse(d -> d.add(diaCount), () -> eco.put(player, diaCount));
+	}
+
+	public void add(ItemStack itemStack, OfflinePlayer player) {
+		add(new DiaCount(itemStack), player);
 	}
 
 	@SuppressWarnings("unchecked")
