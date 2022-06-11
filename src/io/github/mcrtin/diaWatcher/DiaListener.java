@@ -36,12 +36,13 @@ public class DiaListener implements Listener {
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
-	public void onItemDeath(EntityDamageEvent e) {// TODO
+	public void onItemDeath(EntityDamageEvent e) {
 		if (e.getEntityType() != EntityType.DROPPED_ITEM)
 			return;
-		if (e.getFinalDamage() <= 0)
+		if (e.getDamage() <= 0)
 			return;
-		log.destroy((Item) e.getEntity(), Optional.of(e.getCause()));
+		if (Main.getHealth((Item) e.getEntity()) <= e.getDamage())
+			log.destroy((Item) e.getEntity(), Optional.of(e.getCause()));
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
