@@ -1,12 +1,14 @@
 package io.github.mcrtin.diaWatcher;
 
+import static io.github.mcrtin.diaWatcher.Econemie.ECO;
+
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Container;
 import org.bukkit.entity.Player;
@@ -24,7 +26,7 @@ public class OwnedItemStack implements Owned {
 	private final ItemStack itemStack;
 	@Nullable
 	private Optional<OfflinePlayer> owner = null;
-	
+
 	@Override
 	public Optional<OfflinePlayer> getOwner() {
 		if (owner != null)
@@ -52,16 +54,28 @@ public class OwnedItemStack implements Owned {
 		return owner;
 	}
 
-	@Override
-	public void setOwner(Player player) {
-		owner = Optional.of(player);
-		ItemMeta itemMeta = itemStack.getItemMeta();
-		itemMeta.getPersistentDataContainer().set(OwnerKey, PersistentDataType.STRING, player.getUniqueId().toString());
+	public void transfer(Optional<Player> player) {
+		forEach(i -> i.transfer(player));
+		player.ifPresentOrElse(p -> {
+			final DiaCount diaCount = new DiaCount(itemStack.getType(), itemStack.getAmount());
+			if (diaCount.isEmpty())
+				return;
+			getOwner().ifPresentOrElse(p2 -> {
+				if (!p2.equals(p))
+					ECO.transfer(diaCount, p2, p);
+			}, () -> ECO.add(diaCount, p));
+			setOwner(p);
+		}, () -> {
+			final DiaCount diaCount = new DiaCount(itemStack.getType(), itemStack.getAmount());
+			if (diaCount.isEmpty())
+				return;
+			getOwner().ifPresent(p -> ECO.subtract(diaCount, p));
+			removeOwner();
+		});
+	}
 
-		if (itemStack.getType() != Material.SHULKER_BOX) {
-			itemStack.setItemMeta(itemMeta);
-			return;
-		}
+	private void forEach(Consumer<OwnedItemStack> action) {
+		ItemMeta itemMeta = itemStack.getItemMeta();
 		if (!(itemMeta instanceof BlockStateMeta))
 			return;
 		BlockStateMeta bm = (BlockStateMeta) itemMeta;
@@ -69,7 +83,26 @@ public class OwnedItemStack implements Owned {
 			return;
 		Container container = (Container) bm.getBlockState();
 		final Inventory snapshotInventory = container.getSnapshotInventory();
-		snapshotInventory.forEach(i -> new OwnedItemStack(itemStack).setOwner(player));
+		snapshotInventory.forEach(i -> action.accept(new OwnedItemStack(i)));
+		itemStack.setItemMeta(itemMeta);
+	}
+
+	public void removeOwner() {
+		owner = Optional.empty();
+		if (!itemStack.hasItemMeta())
+			return;
+		ItemMeta itemMeta = itemStack.getItemMeta();
+		itemMeta.getPersistentDataContainer().remove(OwnerKey);
+		itemStack.setItemMeta(itemMeta);
+	}
+
+	@Override
+	public void setOwner(Player player) {
+		owner = Optional.of(player);
+		if (!itemStack.hasItemMeta())
+			return;
+		ItemMeta itemMeta = itemStack.getItemMeta();
+		itemMeta.getPersistentDataContainer().set(OwnerKey, PersistentDataType.STRING, player.getUniqueId().toString());
 		itemStack.setItemMeta(itemMeta);
 	}
 
