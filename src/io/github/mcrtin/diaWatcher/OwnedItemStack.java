@@ -56,21 +56,24 @@ public class OwnedItemStack implements Owned {
 
 	public void transfer(Optional<Player> player) {
 		forEach(i -> i.transfer(player));
-		player.ifPresentOrElse(p -> {
+
+		player.ifPresentOrElse(to -> {
 			final DiaCount diaCount = new DiaCount(itemStack.getType(), itemStack.getAmount());
-			if (diaCount.isEmpty())
-				return;
-			getOwner().ifPresentOrElse(p2 -> {
-				if (!p2.equals(p))
-					ECO.transfer(diaCount, p2, p);
-			}, () -> ECO.add(diaCount, p));
-			setOwner(p);
+//			if (diaCount.isEmpty())
+//				return;
+			getOwner().ifPresentOrElse(from -> {
+				if (!from.equals(to))
+					ECO.transfer(diaCount, from, to);
+			}, () -> ECO.add(diaCount, to));
+			setOwner(to);
 		}, () -> {
 			final DiaCount diaCount = new DiaCount(itemStack.getType(), itemStack.getAmount());
 			if (diaCount.isEmpty())
 				return;
-			getOwner().ifPresent(p -> ECO.subtract(diaCount, p));
-			removeOwner();
+			getOwner().ifPresent(from -> {
+				ECO.subtract(diaCount, from);
+				removeOwner();
+			});
 		});
 	}
 
@@ -93,25 +96,42 @@ public class OwnedItemStack implements Owned {
 			return;
 		ItemMeta itemMeta = itemStack.getItemMeta();
 		itemMeta.getPersistentDataContainer().remove(OwnerKey);
+//		List<String> lore = itemMeta.getLore();
+//		if (lore != null)
+//			lore = lore.stream().filter(s -> !s.contains("owner: ")).collect(Collectors.toList());
+//		itemMeta.setLore(lore);
 		itemStack.setItemMeta(itemMeta);
 	}
 
 	@Override
-	public void setOwner(Player player) {
+	public void setOwner(OfflinePlayer player) {
 		owner = Optional.of(player);
-		if (!itemStack.hasItemMeta())
-			return;
 		ItemMeta itemMeta = itemStack.getItemMeta();
 		itemMeta.getPersistentDataContainer().set(OwnerKey, PersistentDataType.STRING, player.getUniqueId().toString());
+//		List<String> lore = itemMeta.getLore();
+//		lore = lore == null ? lore = new ArrayList<>()
+//				: lore.stream().filter(s -> !s.contains("owner: ")).collect(Collectors.toList());
+//		lore.add("owner: " + player.getName());
+//		itemMeta.setLore(lore);
 		itemStack.setItemMeta(itemMeta);
 	}
 
 	@Override
-	public boolean isOwner(Player player) {
+	public boolean isOwner(OfflinePlayer player) {
 		return getOwner().filter(p -> p.equals(player)).isPresent();
 	}
 
-	public String toString() {
+	public String getOwnerString() {
 		return "§b" + getOwnerName().orElse("§7§omissing") + "§r";
+	}
+
+	public String toString() {
+		StringBuilder toString = new StringBuilder("§9").append(itemStack.getType().name()).append(" §8x §a")
+				.append(itemStack.getAmount()).append("§r");
+		return toString.toString();
+	}
+
+	public boolean hasOwner() {
+		return getOwner().isPresent();
 	}
 }

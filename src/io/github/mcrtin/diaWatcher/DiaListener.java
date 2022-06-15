@@ -1,14 +1,12 @@
 package io.github.mcrtin.diaWatcher;
 
-import java.util.Optional;
-
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Container;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Item;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -31,7 +29,11 @@ public class DiaListener implements Listener {
 
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
 	public void onItemDespawn(ItemDespawnEvent e) {
-		log.destroy(e.getEntity(), Optional.empty());
+		final Item entity = e.getEntity();
+		final ItemStack itemStack = entity.getItemStack();
+		if (!hasDias(itemStack))
+			return;
+		log.destroy(entity.getLocation(), new OwnedItemStack(itemStack), "DESPAWN");
 
 	}
 
@@ -39,16 +41,25 @@ public class DiaListener implements Listener {
 	public void onItemDeath(EntityDamageEvent e) {
 		if (e.getEntityType() != EntityType.DROPPED_ITEM)
 			return;
-		if (e.getDamage() <= 0)
+		final double damage = e.getDamage();
+		if (damage <= 0)
 			return;
-		if (Main.getHealth((Item) e.getEntity()) <= e.getDamage())
-			log.destroy((Item) e.getEntity(), Optional.of(e.getCause()));
+		final Item item = (Item) e.getEntity();
+		if (NmsItem.getHealth(item) > damage)
+			return;
+
+		final ItemStack itemStack = item.getItemStack();
+		if (!hasDias(itemStack))
+			return;
+		log.destroy(item.getLocation(), new OwnedItemStack(itemStack), e.getCause().name());
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
 	public void onBlockBreak(BlockDropItemEvent e) {
-		e.getItems().forEach(item -> log.playerBreakBlock(e.getBlockState(), e.getPlayer(), item));
-
+		final Material type = e.getBlockState().getType();
+		final Location location = e.getBlock().getLocation();
+		e.getItems().stream().filter(item -> hasDias(item.getItemStack())).forEach(
+				item -> log.playerBreakBlock(type, location, new OwnedItemStack(item.getItemStack()), e.getPlayer()));
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
@@ -59,65 +70,39 @@ public class DiaListener implements Listener {
 		final Player player = Bukkit.getPlayer(hEntity.getUniqueId());
 		final Inventory topInventory = e.getInventory();
 		final Inventory bottomInventory = e.getView().getBottomInventory();
+		final Location loc = topInventory.getLocation();
 		final boolean clickBottom = e.getClickedInventory().equals(bottomInventory);
+		ItemStack itemStack;
 		switch (e.getAction()) {
 		case CLONE_STACK:// TODO
-			break;
-		case HOTBAR_MOVE_AND_READD:
+			return;
+		case HOTBAR_MOVE_AND_READD:// swap? (hotkeying)
 			if (clickBottom)
 				return;
-			ItemStack itemStack = e.getCursor();
-			if (hasDias(itemStack))
-				log.container2player(player, topInventory, itemStack);
+			itemStack = e.getCursor();
 			break;
 		case MOVE_TO_OTHER_INVENTORY:
-			itemStack = e.getCurrentItem();
-			if (clickBottom || !hasDias(itemStack))
-				return;
-			log.container2player(player, topInventory, itemStack);
-
-			break;
-		case PICKUP_ALL:
-			itemStack = e.getCurrentItem();
-			if (clickBottom || !hasDias(itemStack))
-				return;
-			log.container2player(player, topInventory, itemStack);
-			break;
-		case PICKUP_HALF:
-			itemStack = e.getCurrentItem();
-			if (clickBottom || !hasDias(itemStack))
-				return;
-			itemStack = itemStack.clone();
-			itemStack.setAmount(itemStack.getAmount() / 2);// TODO bug? (rounds down)
-			log.container2player(player, topInventory, itemStack);
-			break;
-		case PICKUP_ONE:
-			itemStack = e.getCurrentItem();
-			if (clickBottom || !hasDias(itemStack))
-				return;
-			itemStack = e.getCurrentItem().clone();
-			itemStack.setAmount(1);
-			log.container2player(player, topInventory, itemStack);
-			break;
-		case PICKUP_SOME:
-			itemStack = e.getCurrentItem();
-			if (clickBottom || !hasDias(itemStack))
-				return;
-			itemStack = e.getCurrentItem().clone();
-			itemStack.setAmount(e.getCursor().getMaxStackSize() - e.getCursor().getAmount());
-			log.container2player(player, topInventory, itemStack);
-			break;
-		case SWAP_WITH_CURSOR:
 			if (clickBottom)
 				return;
 			itemStack = e.getCurrentItem();
-			if (hasDias(itemStack))
-				log.container2player(player, topInventory, itemStack);
+			break;
+		case PICKUP_ALL:
+		case PICKUP_HALF:
+		case PICKUP_ONE:
+			if (clickBottom)
+				return;
+			itemStack = e.getCurrentItem();
+			break;
+		case SWAP_WITH_CURSOR:// TODO - stack blocks
+			if (clickBottom)
+				return;
+			itemStack = e.getCurrentItem();
 			break;
 		default:
-			break;
-
+			return;
 		}
+		if (hasDias(itemStack))
+			log.container2player(player, loc, new OwnedItemStack(itemStack));
 	}
 
 	@EventHandler
@@ -130,11 +115,16 @@ public class DiaListener implements Listener {
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
 	public void onEntityPickupItem(EntityPickupItemEvent e) {
 		final Item item = e.getItem();
-		final LivingEntity entity = e.getEntity();
-		if (entity.getType() != EntityType.PLAYER)
+		if (e.getEntityType() != EntityType.PLAYER)
 			return;
-		if (hasDias(item.getItemStack()))
-			log.playerPickUpItem(item, (Player) entity, e.getRemaining());
+		final Player player = (Player) e.getEntity();
+		final ItemStack itemStack = item.getItemStack();
+		if (!hasDias(itemStack))
+			return;
+
+		log.playerPickUpItem(item.getLocation(), new OwnedItemStack(itemStack), player);// Remaining ignored cuz if
+																						// there are remaining, they are
+																						// already his
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
@@ -142,10 +132,10 @@ public class DiaListener implements Listener {
 		if (!e.canBuild())
 			return;
 		final Material type = e.getItemInHand().getType();
+		final Player player = e.getPlayer();
 		if (type == Material.DIAMOND_BLOCK || type == Material.DIAMOND_ORE)
-			new OwnedBlock(e.getBlock()).setOwner(e.getPlayer());
-//		if (hasDias(itemInHand))
-//			log.playerPlaceBlock(e.getBlock(), itemInHand, e.getPlayer());
+			if (new OwnedItemStack(e.getItemInHand()).isOwner(player))
+				new OwnedBlock(e.getBlock()).setOwner(player);
 	}
 
 	private boolean hasDias(ItemStack itemStack) {

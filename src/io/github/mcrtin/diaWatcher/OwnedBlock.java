@@ -6,10 +6,9 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockState;
-import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataType;
 
 import com.jeff_media.customblockdata.CustomBlockData;
@@ -42,18 +41,18 @@ public class OwnedBlock implements Owned {
 	}
 
 	@Override
-	public void setOwner(Player player) {
+	public void setOwner(OfflinePlayer player) {
 		owner = Optional.of(player);
 		pdc.set(OwnerKey, PersistentDataType.STRING, player.getUniqueId().toString());
 	}
 
 	@Override
-	public boolean isOwner(Player player) {
+	public boolean isOwner(OfflinePlayer player) {
 		return getOwner().filter(p -> p.equals(player)).isPresent();
 	}
 
-	public OwnedBlock(BlockState blockState) {
-		this.pdc = new CustomBlockData(blockState.getBlock(), Main.getPlugin());
+	public OwnedBlock(Location loc) {
+		this.pdc = new CustomBlockData(loc.getBlock(), Main.getPlugin());
 	}
 
 	public OwnedBlock(Block block) {
