@@ -16,13 +16,13 @@ import lombok.extern.log4j.Log4j2;
 
 @Log4j2
 @Singleton
-public class Econemie {
+public class Economie {
 
-	public static final Econemie ECO = new Econemie();
+	public static final Economie ECO = new Economie();
 	private final Map<OfflinePlayer, DiaCount> eco = new HashMap<>();
 	private DiaCount total;
 
-	private Econemie() {
+	private Economie() {
 		load();
 	}
 

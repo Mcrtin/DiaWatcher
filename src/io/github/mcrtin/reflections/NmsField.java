@@ -8,8 +8,8 @@ public class NmsField {
 	public static Field getNmsField(Class<?> clazz, String... possibleNames)
 			throws NoSuchFieldException, SecurityException {
 		return Arrays.stream(clazz.getDeclaredFields()).filter(
-				f -> f.getType().equals(int.class) && Arrays.stream(possibleNames).anyMatch(f.getName()::equals))
-				.findFirst().orElseThrow(() -> new NoSuchFieldException());
+				f -> f.getType() == int.class && Arrays.asList(possibleNames).contains(f.getName()))
+				.findFirst().orElseThrow(NoSuchFieldException::new);
 	}
 
 	public static Field getNmsField(String nmsClass, String... possibleNames)

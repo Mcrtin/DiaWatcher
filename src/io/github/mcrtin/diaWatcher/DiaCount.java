@@ -46,47 +46,8 @@ public class DiaCount implements ConfigurationSerializable {
 		return raw == 0 && ore == 0;
 	}
 
-	public void mulitply(int muiltplyer) {
-		raw *= muiltplyer;
-		ore *= muiltplyer;
-	}
-
 	public String toString() {
 		return raw + " dias and " + ore + " ores";
-	}
-
-//	public void add(ItemStack itemStack) {
-//		if (itemStack == null)
-//			return;
-//		switch (itemStack.getType()) {
-//		case DIAMOND:
-//			add(itemStack.getAmount());
-//			return;
-//		case DIAMOND_ORE:
-//			addOre(itemStack.getAmount());
-//			return;
-//		case DIAMOND_BLOCK:
-//			add(itemStack.getAmount() * 9);
-//			return;
-//		case SHULKER_BOX:
-//			final ItemMeta itemMeta = itemStack.getItemMeta();
-//			if (!(itemMeta instanceof BlockStateMeta))
-//				return;
-//			BlockStateMeta im = (BlockStateMeta) itemMeta;
-//			if ((im.getBlockState() instanceof Container))
-//				return;
-//			Container container = (Container) im.getBlockState();
-//			final Inventory snapshotInventory = container.getSnapshotInventory();
-//			snapshotInventory.forEach(this::add);
-//
-//		default:
-//			return;
-//		}
-//	}
-
-	public void negate() {
-		raw = -raw;
-		ore = -ore;
 	}
 
 	@Override
@@ -101,27 +62,19 @@ public class DiaCount implements ConfigurationSerializable {
 	@Nonnull
 	public static DiaCount deserialize(Map<String, Object> args) {
 		Object raw = args.get("raw");
-		if (raw == null || !raw.getClass().equals(int.class))
+		if (!(raw instanceof Integer))
 			raw = 0;
 		Object ore = args.get("ore");
-		if (ore == null || !ore.getClass().equals(int.class))
+		if (!(ore instanceof Integer))
 			ore = 0;
 		return new DiaCount((int) raw, (int) ore);
 	}
 
 	public DiaCount(Material type, int i) {
 		switch (type) {
-		case DIAMOND:
-			add(i);
-			return;
-		case DIAMOND_ORE:
-			addOre(i);
-			return;
-		case DIAMOND_BLOCK:
-			add(i * 9);
-			return;
-		default:
-			return;
+			case DIAMOND -> add(i);
+			case DIAMOND_ORE -> addOre(i);
+			case DIAMOND_BLOCK -> add(i * 9);
 		}
 	}
 

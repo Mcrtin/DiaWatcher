@@ -1,5 +1,6 @@
 package io.github.mcrtin.diaWatcher;
 
+import com.jeff_media.customblockdata.events.CustomBlockDataRemoveEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -16,18 +17,18 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.ItemDespawnEvent;
+import org.bukkit.event.inventory.FurnaceSmeltEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BlockStateMeta;
-import org.bukkit.inventory.meta.ItemMeta;
 
-import com.jeff_media.customblockdata.events.CustomBlockDataRemoveEvent;
+import java.util.Objects;
 
 public class DiaListener implements Listener {
 	private final Logger log = new Logger();
 
-	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
+	@EventHandler(priority = EventPriority.MONITOR)
 	public void onItemDespawn(ItemDespawnEvent e) {
 		final Item entity = e.getEntity();
 		final ItemStack itemStack = entity.getItemStack();
@@ -37,7 +38,14 @@ public class DiaListener implements Listener {
 
 	}
 
-	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
+	@EventHandler(priority = EventPriority.MONITOR)
+	public void onSmeltItem(FurnaceSmeltEvent e) {
+		ItemStack result = e.getResult();
+		if (hasDias(result))
+			log.smelt(e.getBlock().getLocation(), new OwnedItemStack(e.getSource()), new OwnedItemStack(result));
+	}
+
+	@EventHandler(priority = EventPriority.MONITOR)
 	public void onItemDeath(EntityDamageEvent e) {
 		if (e.getEntityType() != EntityType.DROPPED_ITEM)
 			return;
@@ -54,15 +62,16 @@ public class DiaListener implements Listener {
 		log.destroy(item.getLocation(), new OwnedItemStack(itemStack), e.getCause().name());
 	}
 
-	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
+	@EventHandler(priority = EventPriority.LOWEST)
 	public void onBlockBreak(BlockDropItemEvent e) {
 		final Material type = e.getBlockState().getType();
 		final Location location = e.getBlock().getLocation();
-		e.getItems().stream().filter(item -> hasDias(item.getItemStack())).forEach(
-				item -> log.playerBreakBlock(type, location, new OwnedItemStack(item.getItemStack()), e.getPlayer()));
+		e.getItems().stream()
+				.filter(item -> hasDias(item.getItemStack()))
+				.forEach(item -> log.playerBreakBlock(type, location, new OwnedItemStack(item.getItemStack()), e.getPlayer()));
 	}
 
-	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
+	@EventHandler(priority = EventPriority.MONITOR)
 	public void onInventoryClick(InventoryClickEvent e) {
 		final HumanEntity hEntity = e.getWhoClicked();
 		if (hEntity.getType() != EntityType.PLAYER)
@@ -71,7 +80,7 @@ public class DiaListener implements Listener {
 		final Inventory topInventory = e.getInventory();
 		final Inventory bottomInventory = e.getView().getBottomInventory();
 		final Location loc = topInventory.getLocation();
-		final boolean clickBottom = e.getClickedInventory().equals(bottomInventory);
+		final boolean clickBottom = Objects.equals(e.getClickedInventory(), bottomInventory);
 		ItemStack itemStack;
 		switch (e.getAction()) {
 		case CLONE_STACK:// TODO
@@ -82,23 +91,15 @@ public class DiaListener implements Listener {
 			itemStack = e.getCursor();
 			break;
 		case MOVE_TO_OTHER_INVENTORY:
-			if (clickBottom)
+			case SWAP_WITH_CURSOR:// TODO - stack blocks
+			case PICKUP_ALL:
+			case PICKUP_HALF:
+			case PICKUP_ONE:
+				if (clickBottom)
 				return;
 			itemStack = e.getCurrentItem();
 			break;
-		case PICKUP_ALL:
-		case PICKUP_HALF:
-		case PICKUP_ONE:
-			if (clickBottom)
-				return;
-			itemStack = e.getCurrentItem();
-			break;
-		case SWAP_WITH_CURSOR:// TODO - stack blocks
-			if (clickBottom)
-				return;
-			itemStack = e.getCurrentItem();
-			break;
-		default:
+			default:
 			return;
 		}
 		if (hasDias(itemStack))
@@ -112,7 +113,7 @@ public class DiaListener implements Listener {
 			e.setCancelled(true);
 	}
 
-	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
+	@EventHandler(priority = EventPriority.MONITOR)
 	public void onEntityPickupItem(EntityPickupItemEvent e) {
 		final Item item = e.getItem();
 		if (e.getEntityType() != EntityType.PLAYER)
@@ -127,7 +128,12 @@ public class DiaListener implements Listener {
 																						// already his
 	}
 
-	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
+//	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
+//	public void onPlayerCreative(InventoryCreativeEvent e) {
+//	TODO is this the right method?
+//	}
+
+	@EventHandler(priority = EventPriority.MONITOR)
 	public void onPlayerPlaceBlock(BlockPlaceEvent e) {
 		if (!e.canBuild())
 			return;
@@ -145,21 +151,19 @@ public class DiaListener implements Listener {
 		case DIAMOND, DIAMOND_ORE, DIAMOND_BLOCK:
 			return true;
 		case SHULKER_BOX:
-			final ItemMeta itemMeta = itemStack.getItemMeta();
-			if (itemMeta instanceof BlockStateMeta) {
-				BlockStateMeta im = (BlockStateMeta) itemMeta;
-				if (im.getBlockState() instanceof Container) {
-					Container container = (Container) im.getBlockState();
-					final Inventory snapshotInventory = container.getSnapshotInventory();
-					if (snapshotInventory.contains(Material.DIAMOND))
-						return true;
-					if (snapshotInventory.contains(Material.DIAMOND_ORE))
-						return true;
-					if (snapshotInventory.contains(Material.DIAMOND_BLOCK))
-						return true;
-				}
-			}
-		default:
+			if (!(itemStack.getItemMeta() instanceof BlockStateMeta im))
+				return false;
+			if (!(im.getBlockState() instanceof Container container))
+				return false;
+
+			final Inventory snapshotInventory = container.getSnapshotInventory();
+			if (snapshotInventory.contains(Material.DIAMOND))
+				return true;
+			if (snapshotInventory.contains(Material.DIAMOND_ORE))
+				return true;
+			if (snapshotInventory.contains(Material.DIAMOND_BLOCK))
+				return true;
+			default:
 			return false;
 		}
 	}

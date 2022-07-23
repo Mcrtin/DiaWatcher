@@ -6,7 +6,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
 
 public interface Owned {
-	static final NamespacedKey OwnerKey = new NamespacedKey(Main.getPlugin(), "Owner");
+	NamespacedKey ownerKey = new NamespacedKey(Main.getPlugin(), "Owner");
 
 	Optional<OfflinePlayer> getOwner();
 
@@ -15,6 +15,6 @@ public interface Owned {
 	boolean isOwner(OfflinePlayer player);
 
 	default Optional<String> getOwnerName() {
-		return getOwner().map(player -> player.getName());
+		return getOwner().map(OfflinePlayer::getName);
 	}
 }

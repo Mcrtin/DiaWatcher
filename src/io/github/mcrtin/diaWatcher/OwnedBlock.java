@@ -1,54 +1,41 @@
 package io.github.mcrtin.diaWatcher;
 
-import java.util.Optional;
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
+import com.jeff_media.customblockdata.CustomBlockData;
+import lombok.Data;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.persistence.PersistentDataType;
+import org.jetbrains.annotations.NotNull;
 
-import com.jeff_media.customblockdata.CustomBlockData;
-
-import lombok.Data;
+import javax.annotation.Nullable;
+import java.util.UUID;
 
 @Data
 public class OwnedBlock implements Owned {
 	private final CustomBlockData pdc;
 	@Nullable
-	private Optional<OfflinePlayer> owner = null;
+	private OfflinePlayer owner = null;
 
-	@Override
-	public Optional<OfflinePlayer> getOwner() {
-		if (owner != null)
-			return owner;
-		if (!pdc.has(OwnerKey, PersistentDataType.STRING)) {
-			owner = Optional.empty();
-			return owner;
-		}
-
-		try {
-			final String owner = pdc.get(OwnerKey, PersistentDataType.STRING);
-			this.owner = Optional.of(Bukkit.getOfflinePlayer(UUID.fromString(owner)));
-		} catch (IllegalArgumentException ex) {
-			owner = Optional.empty();
-
-		}
-		return owner;
+	public OwnedBlock(CustomBlockData pdc) {
+		this.pdc = pdc;
+		if (!pdc.has(ownerKey, PersistentDataType.STRING))
+			return;
+		final String owner = pdc.get(ownerKey, PersistentDataType.STRING);
+		assert owner != null;
+		this.owner = Bukkit.getOfflinePlayer(UUID.fromString(owner));
 	}
 
 	@Override
-	public void setOwner(OfflinePlayer player) {
-		owner = Optional.of(player);
-		pdc.set(OwnerKey, PersistentDataType.STRING, player.getUniqueId().toString());
+	public void setOwner(@NotNull OfflinePlayer player) {
+		owner = player;
+		pdc.set(ownerKey, PersistentDataType.STRING, player.getUniqueId().toString());
 	}
 
 	@Override
 	public boolean isOwner(OfflinePlayer player) {
-		return getOwner().filter(p -> p.equals(player)).isPresent();
+		return owner != null && owner.equals(player);
 	}
 
 	public OwnedBlock(Location loc) {

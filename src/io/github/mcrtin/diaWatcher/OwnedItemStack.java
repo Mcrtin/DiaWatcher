@@ -1,13 +1,6 @@
 package io.github.mcrtin.diaWatcher;
 
-import static io.github.mcrtin.diaWatcher.Econemie.ECO;
-
-import java.util.Optional;
-import java.util.UUID;
-import java.util.function.Consumer;
-
-import javax.annotation.Nullable;
-
+import lombok.Data;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Container;
@@ -18,120 +11,106 @@ import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.jetbrains.annotations.NotNull;
 
-import lombok.Data;
+import javax.annotation.Nullable;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.function.Consumer;
+
+import static io.github.mcrtin.diaWatcher.Economie.ECO;
 
 @Data
 public class OwnedItemStack implements Owned {
 	private final ItemStack itemStack;
+
 	@Nullable
-	private Optional<OfflinePlayer> owner = null;
+	private OfflinePlayer owner = null;
 
-	@Override
-	public Optional<OfflinePlayer> getOwner() {
-		if (owner != null)
-			return owner;
-
-		if (!itemStack.hasItemMeta()) {
-			owner = Optional.empty();
-			return owner;
-		}
+	public OwnedItemStack(ItemStack itemStack) {
+		this.itemStack = itemStack;
+		if (!itemStack.hasItemMeta())
+			return;
 
 		ItemMeta itemMeta = itemStack.getItemMeta();
+		assert itemMeta != null;
 		final PersistentDataContainer pdc = itemMeta.getPersistentDataContainer();
-		if (!pdc.has(OwnerKey, PersistentDataType.STRING)) {
-			owner = Optional.empty();
-			return owner;
-		}
-
-		try {
-			final String owner = pdc.get(OwnerKey, PersistentDataType.STRING);
-			this.owner = Optional.of(Bukkit.getOfflinePlayer(UUID.fromString(owner)));
-		} catch (IllegalArgumentException ex) {
-			owner = Optional.empty();
-
-		}
-		return owner;
+		if (!pdc.has(ownerKey, PersistentDataType.STRING))
+			return;
+		final String owner = pdc.get(ownerKey, PersistentDataType.STRING);
+		assert owner != null;
+		this.owner = Bukkit.getOfflinePlayer(UUID.fromString(owner));
 	}
 
-	public void transfer(Optional<Player> player) {
-		forEach(i -> i.transfer(player));
+	public void transfer(@Nullable OfflinePlayer to) {
+		if (Objects.equals(owner, to))
+			return;
+		forEach(i -> i.transfer(to));
+		final DiaCount diaCount = new DiaCount(itemStack.getType(), itemStack.getAmount());
+		if (diaCount.isEmpty())
+			return;
 
-		player.ifPresentOrElse(to -> {
-			final DiaCount diaCount = new DiaCount(itemStack.getType(), itemStack.getAmount());
-//			if (diaCount.isEmpty())
-//				return;
-			getOwner().ifPresentOrElse(from -> {
-				if (!from.equals(to))
-					ECO.transfer(diaCount, from, to);
-			}, () -> ECO.add(diaCount, to));
+		if (to != null) {
+			if (owner == null)
+				ECO.add(diaCount, to);
+			else if (!owner.equals(to))
+					ECO.transfer(diaCount, owner, to);
 			setOwner(to);
-		}, () -> {
-			final DiaCount diaCount = new DiaCount(itemStack.getType(), itemStack.getAmount());
-			if (diaCount.isEmpty())
-				return;
-			getOwner().ifPresent(from -> {
-				ECO.subtract(diaCount, from);
-				removeOwner();
-			});
-		});
+			return;
+		}
+
+		if (owner == null)
+			return;
+
+		ECO.subtract(diaCount, owner);
+		removeOwner();
 	}
 
 	private void forEach(Consumer<OwnedItemStack> action) {
 		ItemMeta itemMeta = itemStack.getItemMeta();
-		if (!(itemMeta instanceof BlockStateMeta))
+		if (!(itemMeta instanceof BlockStateMeta bm))
 			return;
-		BlockStateMeta bm = (BlockStateMeta) itemMeta;
-		if ((bm.getBlockState() instanceof Container))
+		if (!(bm.getBlockState() instanceof Container container))
 			return;
-		Container container = (Container) bm.getBlockState();
 		final Inventory snapshotInventory = container.getSnapshotInventory();
 		snapshotInventory.forEach(i -> action.accept(new OwnedItemStack(i)));
 		itemStack.setItemMeta(itemMeta);
 	}
 
 	public void removeOwner() {
-		owner = Optional.empty();
+		owner = null;
 		if (!itemStack.hasItemMeta())
 			return;
 		ItemMeta itemMeta = itemStack.getItemMeta();
-		itemMeta.getPersistentDataContainer().remove(OwnerKey);
-//		List<String> lore = itemMeta.getLore();
-//		if (lore != null)
-//			lore = lore.stream().filter(s -> !s.contains("owner: ")).collect(Collectors.toList());
-//		itemMeta.setLore(lore);
+		assert itemMeta != null;
+		itemMeta.getPersistentDataContainer().remove(ownerKey);
 		itemStack.setItemMeta(itemMeta);
 	}
 
 	@Override
-	public void setOwner(OfflinePlayer player) {
-		owner = Optional.of(player);
+	public void setOwner(@NotNull OfflinePlayer player) {
+		owner = player;
 		ItemMeta itemMeta = itemStack.getItemMeta();
-		itemMeta.getPersistentDataContainer().set(OwnerKey, PersistentDataType.STRING, player.getUniqueId().toString());
-//		List<String> lore = itemMeta.getLore();
-//		lore = lore == null ? lore = new ArrayList<>()
-//				: lore.stream().filter(s -> !s.contains("owner: ")).collect(Collectors.toList());
-//		lore.add("owner: " + player.getName());
-//		itemMeta.setLore(lore);
+		assert itemMeta != null;
+		itemMeta.getPersistentDataContainer().set(ownerKey, PersistentDataType.STRING, player.getUniqueId().toString());
 		itemStack.setItemMeta(itemMeta);
 	}
 
 	@Override
-	public boolean isOwner(OfflinePlayer player) {
-		return getOwner().filter(p -> p.equals(player)).isPresent();
+	public boolean isOwner(@NotNull OfflinePlayer player) {
+		return owner != null && owner.equals(player);
 	}
 
 	public String getOwnerString() {
-		return "§b" + getOwnerName().orElse("§7§omissing") + "§r";
+		return "\u0047b" + getOwnerName().orElse("\u00477\u0047omissing") + "\u0047r";
 	}
 
 	public String toString() {
-		StringBuilder toString = new StringBuilder("§9").append(itemStack.getType().name()).append(" §8x §a")
-				.append(itemStack.getAmount()).append("§r");
-		return toString.toString();
+		return "\u00479" + itemStack.getType().name() + " \u00478x \u0047a" +
+				itemStack.getAmount() + "\u0047r";
 	}
 
 	public boolean hasOwner() {
-		return getOwner().isPresent();
+		return owner != null;
 	}
 }

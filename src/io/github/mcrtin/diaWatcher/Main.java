@@ -8,6 +8,8 @@ import com.jeff_media.customblockdata.CustomBlockData;
 
 import io.github.mcrtin.logToPlayers.DiaFeedback;
 
+import java.util.Objects;
+
 public class Main extends JavaPlugin {
 	private static JavaPlugin plugin;
 
@@ -24,12 +26,12 @@ public class Main extends JavaPlugin {
 		CustomBlockData.registerListener(this);
 		ConfigurationSerialization.registerClass(DiaCount.class);
 		Bukkit.getPluginManager().registerEvents(new DiaListener(), this);
-		getCommand("sendDiaFeedback").setExecutor(new DiaFeedback());
+		Objects.requireNonNull(getCommand("sendDiaFeedback")).setExecutor(new DiaFeedback());
 
 	}
 
 	public void onDisable() {
-		Econemie.ECO.save();
+		Economie.ECO.save();
 	}
 
 	public static JavaPlugin getPlugin() {

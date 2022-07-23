@@ -6,6 +6,7 @@ import java.util.List;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
+import org.jetbrains.annotations.NotNull;
 
 public class DiaFeedback implements TabExecutor {
 
@@ -13,28 +14,30 @@ public class DiaFeedback implements TabExecutor {
 	private static final String FALSE = "false";
 
 	@Override
-	public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+	public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
 		switch (args.length) {
 		case 0:
 			sender.sendMessage("sendDiaFeedback: " + LogToPlayers.SEND_FEEDBACK.contains(sender));
 			return true;
 		case 1:
 			switch (args[0]) {
-			case TRUE:
-				LogToPlayers.SEND_FEEDBACK.add(sender);
-				sender.sendMessage("set sendDiaFeedback to true");
-				return true;
-			case FALSE:
-				LogToPlayers.SEND_FEEDBACK.remove(sender);
-				sender.sendMessage("set sendDiaFeedback to false");
-				return true;
+				case TRUE -> {
+					LogToPlayers.SEND_FEEDBACK.add(sender);
+					sender.sendMessage("set sendDiaFeedback to true");
+					return true;
+				}
+				case FALSE -> {
+					LogToPlayers.SEND_FEEDBACK.remove(sender);
+					sender.sendMessage("set sendDiaFeedback to false");
+					return true;
+				}
 			}
 		}
 		return false;
 	}
 
 	@Override
-	public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+	public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, String[] args) {
 		List<String> complete = new ArrayList<>();
 		if (args.length != 1)
 			return complete;
