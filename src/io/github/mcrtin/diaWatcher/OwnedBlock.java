@@ -1,6 +1,7 @@
 package io.github.mcrtin.diaWatcher;
 
 import com.jeff_media.customblockdata.CustomBlockData;
+import com.jeff_media.morepersistentdatatypes.datatypes.UuidDataType;
 import lombok.Data;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -20,17 +21,13 @@ public class OwnedBlock implements Owned {
 
 	public OwnedBlock(CustomBlockData pdc) {
 		this.pdc = pdc;
-		if (!pdc.has(ownerKey, PersistentDataType.STRING))
-			return;
-		final String owner = pdc.get(ownerKey, PersistentDataType.STRING);
-		assert owner != null;
-		this.owner = Bukkit.getOfflinePlayer(UUID.fromString(owner));
+		if (pdc.has(ownerKey, UuidDataType.OFFLINE_PLAYER))
+			owner = pdc.get(ownerKey, UuidDataType.OFFLINE_PLAYER);
 	}
 
 	@Override
 	public void setOwner(@NotNull OfflinePlayer player) {
-		owner = player;
-		pdc.set(ownerKey, PersistentDataType.STRING, player.getUniqueId().toString());
+		pdc.set(ownerKey, UuidDataType.OFFLINE_PLAYER, owner = player);
 	}
 
 	@Override
@@ -39,11 +36,11 @@ public class OwnedBlock implements Owned {
 	}
 
 	public OwnedBlock(Location loc) {
-		this.pdc = new CustomBlockData(loc.getBlock(), Main.getPlugin());
+		pdc = new CustomBlockData(loc.getBlock(), Main.getPlugin());
 	}
 
 	public OwnedBlock(Block block) {
-		this.pdc = new CustomBlockData(block, Main.getPlugin());
+		pdc = new CustomBlockData(block, Main.getPlugin());
 	}
 
 	public void remove() {

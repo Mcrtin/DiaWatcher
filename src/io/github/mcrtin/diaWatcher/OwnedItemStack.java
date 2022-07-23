@@ -1,21 +1,18 @@
 package io.github.mcrtin.diaWatcher;
 
+import com.jeff_media.morepersistentdatatypes.datatypes.UuidDataType;
 import lombok.Data;
-import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Container;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
-import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.function.Consumer;
 
 import static io.github.mcrtin.diaWatcher.Economie.ECO;
@@ -35,11 +32,8 @@ public class OwnedItemStack implements Owned {
 		ItemMeta itemMeta = itemStack.getItemMeta();
 		assert itemMeta != null;
 		final PersistentDataContainer pdc = itemMeta.getPersistentDataContainer();
-		if (!pdc.has(ownerKey, PersistentDataType.STRING))
-			return;
-		final String owner = pdc.get(ownerKey, PersistentDataType.STRING);
-		assert owner != null;
-		this.owner = Bukkit.getOfflinePlayer(UUID.fromString(owner));
+		if (pdc.has(ownerKey, UuidDataType.OFFLINE_PLAYER))
+			owner = pdc.get(ownerKey, UuidDataType.OFFLINE_PLAYER);
 	}
 
 	public void transfer(@Nullable OfflinePlayer to) {
@@ -92,7 +86,7 @@ public class OwnedItemStack implements Owned {
 		owner = player;
 		ItemMeta itemMeta = itemStack.getItemMeta();
 		assert itemMeta != null;
-		itemMeta.getPersistentDataContainer().set(ownerKey, PersistentDataType.STRING, player.getUniqueId().toString());
+		itemMeta.getPersistentDataContainer().set(ownerKey, UuidDataType.OFFLINE_PLAYER, player);
 		itemStack.setItemMeta(itemMeta);
 	}
 
